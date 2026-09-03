@@ -83,7 +83,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "نجسورن\n"
             "قتده گتسین\n"
             f"زمان الان: {time_text}\n"
-            "🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆"
+            "🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆\n"
+            "پیروزی یه سوخوم"
         )
 
         await update.message.reply_text(response)
