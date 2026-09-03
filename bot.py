@@ -83,7 +83,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "نجسورن\n"
             "قتده گتسین\n"
             f"زمان الان: {time_text}\n"
-            "زمان تهران\n"
             "🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆"
         )
 
