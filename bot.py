@@ -1,6 +1,7 @@
 import os
 import asyncio
 import re
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from threading import Thread
@@ -41,12 +42,13 @@ SALAM_PATTERN = re.compile(
     r"(?iu)[سصثشs][^\r\n]{0,5}?[لl][^\r\n]{0,5}?[ا\u0622\u0623\u0625aA]?[^\r\n]{0,5}?[مm]"
 )
 
+# ذخیره حروف پیام‌های پشت‌سرهم برای تشخیص «س / ل / ا / م»
+SPLIT_SALAM = {}
+SPLIT_SALAM_TIMEOUT = 10
 
-def is_salam(text: str) -> bool:
-    if not text:
-        return False
 
-    normalized = (
+def normalize_text(text: str) -> str:
+    return (
         text.strip()
         .replace("ي", "ی")
         .replace("ى", "ی")
@@ -55,7 +57,49 @@ def is_salam(text: str) -> bool:
         .replace("ة", "ه")
     )
 
+
+def is_salam(text: str) -> bool:
+    if not text:
+        return False
+
+    normalized = normalize_text(text)
     return bool(SALAM_PATTERN.search(normalized))
+
+
+def is_split_salam(user_key, text: str) -> bool:
+    """تشخیص سلامی که در چند پیام جداگانه ارسال شده است."""
+    if not text:
+        return False
+
+    normalized = normalize_text(text)
+    now = time.time()
+
+    previous, previous_time = SPLIT_SALAM.get(user_key, ("", 0))
+
+    # اگر فاصله بین حروف زیاد شده، از اول شروع کن
+    if now - previous_time > SPLIT_SALAM_TIMEOUT:
+        previous = ""
+
+    # فقط حروف و اعداد را نگه می‌داریم و فاصله‌ها را حذف می‌کنیم
+    current = re.sub(r"\s+", "", normalized)
+    combined = previous + current
+
+    # طول وضعیت را محدود می‌کنیم
+    combined = combined[-20:]
+    SPLIT_SALAM[user_key] = (combined, now)
+
+    # حالت‌های رایج سلام جداجدا
+    split_patterns = (
+        "سلام",
+        "سلم",
+        "salam",
+    )
+
+    if any(pattern in combined.lower() for pattern in split_patterns):
+        SPLIT_SALAM.pop(user_key, None)
+        return True
+
+    return False
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -74,7 +118,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         return
 
-    if is_salam(text):
+    user_id = update.effective_user.id if update.effective_user else 0
+    user_key = (update.effective_chat.id, user_id)
+
+    if is_salam(text) or is_split_salam(user_key, text):
         tehran_time = datetime.now(ZoneInfo("Asia/Tehran"))
         time_text = tehran_time.strftime("%H:%M:%S")
 
