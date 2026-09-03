@@ -1,5 +1,6 @@
 import os
 import asyncio
+import re
 from threading import Thread
 
 from flask import Flask, request
@@ -33,6 +34,29 @@ if not WEBHOOK_URL:
     raise RuntimeError("WEBHOOK_URL environment variable is not set")
 
 
+# تشخیص انواع مختلف نوشتن «سلام» با حروف فارسی و انگلیسی
+SALAM_PATTERN = re.compile(
+    r"(?iu)[سصثشs][^\r\n]{0,5}?[لl][^\r\n]{0,5}?[ا\u0622\u0623\u0625aA]?[^\r\n]{0,5}?[مm]"
+)
+
+
+def is_salam(text: str) -> bool:
+    if not text:
+        return False
+
+    # حروف عربی/فارسی مشابه را یکسان‌سازی می‌کنیم
+    normalized = (
+        text.strip()
+        .replace("ي", "ی")
+        .replace("ى", "ی")
+        .replace("ك", "ک")
+        .replace("ۀ", "ه")
+        .replace("ة", "ه")
+    )
+
+    return bool(SALAM_PATTERN.search(normalized))
+
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
@@ -49,7 +73,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         return
 
-    if text.strip() == "سلام":
+    if is_salam(text):
         await update.message.reply_text("سلام 🌹 خوش آمدید")
 
 
