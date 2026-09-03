@@ -24,6 +24,7 @@ def home():
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+ALLOWED_GROUP_ID = -1001895986483
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN environment variable is not set")
@@ -34,6 +35,13 @@ if not WEBHOOK_URL:
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
+        return
+
+    # فقط همین گروه مجاز است
+    if not update.effective_chat:
+        return
+
+    if update.effective_chat.id != ALLOWED_GROUP_ID:
         return
 
     text = update.message.text
