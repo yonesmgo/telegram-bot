@@ -1,4 +1,4 @@
-```python
+
 import os
 from threading import Thread
 
@@ -78,4 +78,4 @@ def run():
 
 if __name__ == "__main__":
     Thread(target=run).start()
-```
+
