@@ -1,6 +1,8 @@
 import os
 import asyncio
 import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from threading import Thread
 
 from flask import Flask, request
@@ -44,7 +46,6 @@ def is_salam(text: str) -> bool:
     if not text:
         return False
 
-    # حروف عربی/فارسی مشابه را یکسان‌سازی می‌کنیم
     normalized = (
         text.strip()
         .replace("ي", "ی")
@@ -74,7 +75,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if is_salam(text):
-        await update.message.reply_text("سلام 🌹 خوش آمدید")
+        tehran_time = datetime.now(ZoneInfo("Asia/Tehran"))
+        time_text = tehran_time.strftime("%H:%M:%S")
+
+        response = (
+            "سلام 🌹\n"
+            "نجسورن\n"
+            "قتده گتسین\n"
+            f"زمان الان: {time_text}\n"
+            "زمان تهران\n"
+            "🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆"
+        )
+
+        await update.message.reply_text(response)
 
 
 application = Application.builder().token(BOT_TOKEN).build()
