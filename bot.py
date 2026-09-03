@@ -1,5 +1,5 @@
-
 import os
+import asyncio
 from threading import Thread
 
 from flask import Flask, request
@@ -23,9 +23,13 @@ def home():
 # =========================
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN environment variable is not set")
+
+if not WEBHOOK_URL:
+    raise RuntimeError("WEBHOOK_URL environment variable is not set")
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -37,14 +41,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         return
 
-    # پاسخ به سلام
     if text.strip() == "سلام":
         await update.message.reply_text("سلام 🌹 خوش آمدید")
 
-
-# =========================
-# Webhook
-# =========================
 
 application = Application.builder().token(BOT_TOKEN).build()
 
@@ -56,13 +55,43 @@ application.add_handler(
 )
 
 
-@app.route("/webhook", methods=["POST"])
-async def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
+# =========================
+# Telegram Event Loop
+# =========================
 
-    await application.initialize()
-    await application.process_update(update)
-    await application.shutdown()
+telegram_loop = asyncio.new_event_loop()
+
+
+def start_telegram():
+    asyncio.set_event_loop(telegram_loop)
+    telegram_loop.run_until_complete(application.initialize())
+    telegram_loop.run_until_complete(
+        application.bot.set_webhook(url=WEBHOOK_URL)
+    )
+    print(f"Telegram webhook set to: {WEBHOOK_URL}")
+    telegram_loop.run_forever()
+
+
+telegram_thread = Thread(target=start_telegram, daemon=True)
+telegram_thread.start()
+
+
+# =========================
+# Webhook Endpoint
+# =========================
+
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.get_json(force=True)
+
+    update = Update.de_json(data, application.bot)
+
+    future = asyncio.run_coroutine_threadsafe(
+        application.process_update(update),
+        telegram_loop
+    )
+
+    future.result(timeout=20)
 
     return "OK"
 
@@ -77,5 +106,4 @@ def run():
 
 
 if __name__ == "__main__":
-    Thread(target=run).start()
-
+    run()
