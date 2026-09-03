@@ -29,6 +29,7 @@ def home():
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 ALLOWED_GROUP_ID = -1001895986483
+TARGET_USERNAME = "copynima"
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN environment variable is not set")
@@ -113,12 +114,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != ALLOWED_GROUP_ID:
         return
 
+    user = update.effective_user
+    username = (user.username or "").lower() if user else ""
+
+    # اگر کاربر @copynima عکس فرستاد، همان پاسخ سلام را ارسال کن
+    if username == TARGET_USERNAME and update.message.photo:
+        tehran_time = datetime.now(ZoneInfo("Asia/Tehran"))
+        time_text = tehran_time.strftime("%H:%M:%S")
+
+        response = (
+            "سلام 🌹\n"
+            "نجسورن\n"
+            "قتده گتسین\n"
+            f"زمان الان: {time_text}\n"
+            "🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆 🍆\n"
+            "پیروزی یه سوخوم"
+        )
+
+        await update.message.reply_text(response)
+        return
+
     text = update.message.text
 
     if not text:
         return
 
-    user_id = update.effective_user.id if update.effective_user else 0
+    user_id = user.id if user else 0
     user_key = (update.effective_chat.id, user_id)
 
     if is_salam(text) or is_split_salam(user_key, text):
@@ -141,7 +162,7 @@ application = Application.builder().token(BOT_TOKEN).build()
 
 application.add_handler(
     MessageHandler(
-        filters.TEXT & ~filters.COMMAND,
+        (filters.TEXT & ~filters.COMMAND) | filters.PHOTO,
         handle_message
     )
 )
